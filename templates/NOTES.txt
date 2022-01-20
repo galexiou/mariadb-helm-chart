@@ -1,0 +1,1 @@
+1. Internal URL (accessible within the cluster) for Thrift Metastore is:

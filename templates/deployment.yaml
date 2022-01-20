@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "mariadb.fullname" . }}
+  labels:
+{{ include "mariadb.labels" . | indent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "mariadb.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "mariadb.name" . }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
+    spec:
+      containers:
+      - name: {{ .Chart.Name }}
+        image: "{{ .Values.image.registry }}/{{ .Values.image.imagename }}:{{ .Values.image.tag }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        env:
+          - name: MYSQL_ROOT_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: mariadb-secret
+                key: rootpassword
+        ports:
+        - containerPort: {{ .Values.service.port }}
+          name: mysql
+        volumeMounts:
+        - name: mariadb-for-hive
+          mountPath: /var/lib/mysql
+        resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+      {{- if .Values.persistence.enabled }}
+      volumes:
+      {{- end }}
+      {{- if .Values.persistence.enabled }}
+      - name: mariadb-for-hive
+        persistentVolumeClaim:
+          claimName: {{ .Values.persistence.existingClaim | default (printf "maria-pv-claim") }}
+      {{- end }}
